@@ -42,9 +42,6 @@ class Config:
         config = configparser.ConfigParser()
         config.read(self.inipath)
 
-        print(config.sections())
-        print(defaultconfig.sections())
-
         # Adding missing sections/keys (Using defaultconfig as basefile)
         for section in defaultconfig.sections():
             # Adding sections
@@ -53,9 +50,16 @@ class Config:
                 config.add_section(section)
             
             # Adding keys to sections
-            for key in defaultconfig.items(section):
-                if not key in config.items(section):
-                    config[section][key[0]] = ""
+            for defaultkey in defaultconfig.items(section):
+                currentKeys = []
+
+                # Create list of current section keys
+                for key in config.items(section):
+                    currentKeys.append(key[0])
+
+                if not defaultkey[0] in currentKeys:
+                    logging.warning("Key '"+str(defaultkey[0])+"' missing. Adding it now.")
+                    config[section][defaultkey[0]] = ""
                 
         self.writeConfig(config)
 
@@ -97,6 +101,7 @@ class Config:
         except Exception as e:
             logging.error("Failed to read 'config.ini' "+ str(e))
 
-test = Config() # TESTING
-test.checkConfig() # TESTING
+# if config.py is run directly it will check and regenerate the 'config.ini'
+test = Config()
+test.checkConfig() 
     
