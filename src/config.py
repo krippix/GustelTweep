@@ -3,9 +3,7 @@ import configparser
 import pathlib
 import os
 
-
-
-class config:
+class Config:
     # $ProjectRoot/data/config.ini
     datafolder = os.path.join(pathlib.Path(__file__).parent.parent,"data")
     inipath = os.path.join(pathlib.Path(__file__).parent.parent,"data","config.ini")
@@ -13,6 +11,66 @@ class config:
 
     def generateConfig(self):
         # Generates entire configuration anew, this will CLEAR any previous configuration
+        config = self.get_default_config()
+
+        # Write config to file
+        self.writeConfig(config)
+        
+        logging.info("Success! config.ini has been created!")
+        logging.info("Change its parameters and restart the program.")
+        exit()
+
+
+    def checkConfig(self):
+        # Check if config.ini is present, or if it's incomplete
+        
+        # Check if 'data' folder is present
+        if not os.path.exists(self.datafolder):
+            logging.warning("Data folder doesen't exist, creating...")
+            try:
+                os.mkdir(self.datafolder)
+            except Exception as e:
+                logging.error("Failed to create data directory: "+ str(e))
+
+        # Check if 'config.ini' is present
+        if not os.path.exists(self.inipath):
+            logging.warning("ini file doesen't exist, creating...")
+            self.generateConfig()
+
+        # Check if 'config.ini' is missing sections or keys
+        defaultconfig = self.get_default_config()
+        config = configparser.ConfigParser()
+        config.read(self.inipath)
+
+        print(config.sections())
+        print(defaultconfig.sections())
+
+        # Adding missing sections/keys (Using defaultconfig as basefile)
+        for section in defaultconfig.sections():
+            # Adding sections
+            if not section in config.sections():
+                logging.warning("Section '"+str(section)+"' missing. Adding it now.")
+                config.add_section(section)
+            
+            # Adding keys to sections
+            for key in defaultconfig.items(section):
+                if not key in config.items(section):
+                    config[section][key[0]] = ""
+                
+        self.writeConfig(config)
+
+
+    def writeConfig(self, config):
+        # Write config to file
+        try:
+            with open(self.inipath, 'w') as configfile:
+                config.write(configfile)
+        except Exception as e:
+            logging.error("Failed to write 'config.ini': "+ str(e))
+            exit()
+
+
+    def get_default_config(self):
         config = configparser.ConfigParser()
 
         config['AUTH'] = {
@@ -26,37 +84,19 @@ class config:
             "monitored_users" : ""
         }
 
-        # Write config to file
-        try:
-            with open(self.inipath, 'w') as configfile:
-                config.write(configfile)
-        except Exception as e:
-            logging.error("Failed to generate config.ini: "+ str(e))
-
-        logging.info("Success! config.ini has been created!")
-        logging.info("Change its parameters and restart the program.")
-        exit()
-
-
-    def checkConfig(self):
-        # Check if config.ini is present, or if it's incomplete
+        return config
+    
+    
+    def get_config(self, category, key):
+        config = configparser.ConfigParser()
         
-        # Check if 'data' folder is present
-        if not self.datafolder.exists():
-            logging.warning("Data folder doesen't exist, creating...")
-            try:
-                os.mkdir(self.datafolder)
-            except Exception as e:
-                logging.error("Failed to create data directory: "+ str(e))
+        self.checkConfig()
 
-        # Check if 'config.ini' is present
-        if not self.inipath.exists():
-            logging.warning("ini file doesen't exist, creating...")
-            self.generateConfig()
+        try:
+            config.read(self.inipath) 
+        except Exception as e:
+            logging.error("Failed to read 'config.ini' "+ str(e))
 
-        # Check if 'config.ini' is missing parameters
-        # I think i should implement a base object and compare it to the current one, ignoring any parameters set
-
-test = config() # TESTING
-test.generateConfig() # TESTING
+test = Config() # TESTING
+test.checkConfig() # TESTING
     
