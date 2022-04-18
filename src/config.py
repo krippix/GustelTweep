@@ -3,10 +3,16 @@ import configparser
 import pathlib
 import os
 
+"""
+This will handle configuration in this project.
+config.ini is supposed to be generated and repaired in this class in case anything is missing.
+"""
+
 class Config:
     # $ProjectRoot/data/config.ini
     datafolder = os.path.join(pathlib.Path(__file__).parent.parent,"data")
     inipath = os.path.join(pathlib.Path(__file__).parent.parent,"data","config.ini")
+    logfile = os.path.join(pathlib.Path(__file__).parent.parent,"data","gustelTweep.log")
 
 
     def generateConfig(self):
@@ -22,7 +28,7 @@ class Config:
 
 
     def checkConfig(self):
-        # Check if config.ini is present, or if it's incomplete
+        # Check if config.ini is present, and whether it's incomplete
         
         # Check if 'data' folder is present
         if not os.path.exists(self.datafolder):
@@ -59,9 +65,10 @@ class Config:
 
                 if not defaultkey[0] in currentKeys:
                     logging.warning("Key '"+str(defaultkey[0])+"' missing. Adding it now.")
-                    config[section][defaultkey[0]] = ""
+                    config[section][defaultkey[0]] = defaultkey[1]
                 
         self.writeConfig(config)
+        logging.info("Config check completed.")
 
 
     def writeConfig(self, config):
@@ -75,6 +82,7 @@ class Config:
 
 
     def get_default_config(self):
+        # This is where you can define what the config.ini is supposed to look like
         config = configparser.ConfigParser()
 
         config['AUTH'] = {
@@ -88,20 +96,43 @@ class Config:
             "monitored_users" : ""
         }
 
+        config['LOGGING'] = {
+            "loglevel" : "info"
+        }
         return config
     
     
     def get_config(self, category, key):
+        # Calling just the string within the .ini without any checks
         config = configparser.ConfigParser()
         
         self.checkConfig()
 
         try:
-            config.read(self.inipath) 
+            config.read(self.inipath)
+            return config[category][key]
         except Exception as e:
             logging.error("Failed to read 'config.ini' "+ str(e))
 
+
+    def get_loglevel(self):
+        # Returns logging.<loglevel> object for configuration
+        loglevel_input = str(self.get_config("LOGGING","loglevel")).lower()
+
+        allowed_loglevels = {
+            "debug" : logging.debug,
+            "info" : logging.info,
+            "warning" : logging.warning,
+            "error" : logging.error,
+            "critical" : logging.critical
+        }
+
+        try:
+            return allowed_loglevels[loglevel_input]
+        except Exception as e:
+            logging.error("Failed to set configured loglevel. Defaulting to 'info'")
+            return logging.info
+
 # if config.py is run directly it will check and regenerate the 'config.ini'
-test = Config()
-test.checkConfig() 
-    
+logging.info("Checking 'config.ini'...")
+Config().checkConfig()
